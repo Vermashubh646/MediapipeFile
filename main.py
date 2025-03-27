@@ -17,12 +17,11 @@ face_mesh = mp_face_mesh.FaceMesh(
     min_tracking_confidence=0.5
 )
 
-def process_frame(image_data: str) -> str:
+def process_frame(image_data: str):
     """
     Process a Base64-encoded image to detect facial landmarks and determine if the person is focused.
     """
     try:
-        
         if image_data.startswith("data:"):
             header, image_data = image_data.split(",", 1)
         img_bytes = base64.b64decode(image_data)
@@ -75,19 +74,24 @@ def process_frame(image_data: str) -> str:
         )
         
         if success:
-            # Convert rotation vector to rotation matrix.
-                rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
-                # Decompose the rotation matrix to get Euler angles.
-                retval, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rotation_matrix)
-                # retval contains the Euler angles (pitch, yaw, roll) in degrees.
-                euler_angles = np.array(retval).flatten()  # Flatten to ensure a 1D array.
-                pitch = float(euler_angles[0])
-                yaw   = float(euler_angles[1])
-                roll  = float(euler_angles[2])
-
-                return pitch, yaw, roll
+             # Convert rotation vector to rotation matrix.
+            rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
+            # Decompose the rotation matrix to get Euler angles.
+            retval, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rotation_matrix)
+            # retval contains the Euler angles (pitch, yaw, roll) in degrees.
+            euler_angles = np.array(retval).flatten() # Flatten to ensure a 1D array.
+            pitch = float(euler_angles[0])
+            yaw   = float(euler_angles[1])
+            roll  = float(euler_angles[2])
             
-
+            # Iris tracking
+            left_iris_x = face_landmarks.landmark[468].x * w
+            right_iris_x = face_landmarks.landmark[473].x * w
+            nose_x = face_landmarks.landmark[1].x * w
+            
+            iris_position = (left_iris_x + right_iris_x) / 2 - nose_x
+            
+            return pitch, yaw, roll, iris_position
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -95,42 +99,40 @@ async def websocket_endpoint(websocket: WebSocket):
     WebSocket endpoint that accepts Base64-encoded frames from a client,
     processes them, and sends back a focus status.
     """
-
+    
     await websocket.accept()
     try:
-        calibration_frames=180
-        calibration_angles=[]
+        calibration_frames = 180
+        calibration_angles = []
         while True:
             # Receive a Base64-encoded image from the client.
             image_data = await websocket.receive_text()
-            result_base=process_frame(image_data)
+            result_base = process_frame(image_data)
 
             if(type(result_base)==type('abc')):
                 status = result_base
-                
             else:
-                if calibration_frames!=0:
-
-                    calibration_frames=calibration_frames-1
-                    
+                if calibration_frames != 0:
+                    calibration_frames -= 1
                     calibration_angles.append(result_base)
-
                     if calibration_frames == 0:
                         # Compute average baseline angles.
                         baseline_pitch = np.mean([angle[0] for angle in calibration_angles])
                         baseline_yaw = np.mean([angle[1] for angle in calibration_angles])
                         baseline_roll = np.mean([angle[2] for angle in calibration_angles])
                     status = "Calculating Face Angles"
-                    
-                else :
-                    pitch,yaw,roll=result_base
+                else:
+                    pitch, yaw, roll, iris_position = result_base
                     # Now you can compute differences relative to a baseline.
                     relative_pitch = abs(pitch - baseline_pitch)
-                    relative_yaw   = abs(yaw - baseline_yaw)
-                    relative_roll  = abs(roll - baseline_roll)
-
-                    if relative_pitch < 60 and relative_yaw < 60 and relative_roll < 60:
-                        status = "Focused"
+                    relative_yaw = abs(yaw - baseline_yaw)
+                    relative_roll = abs(roll - baseline_roll)
+                    
+                    if relative_pitch < 20 and relative_yaw < 20 and relative_roll < 20:
+                        if abs(iris_position) < 2 or abs(iris_position)>10:
+                            status="Not Focused"
+                        else:
+                            status = "Focused"
                     else:
                         status = "Not Focused"
             
@@ -140,4 +142,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
