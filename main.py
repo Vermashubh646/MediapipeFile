@@ -17,7 +17,7 @@ face_mesh = mp_face_mesh.FaceMesh(
     min_tracking_confidence=0.5
 )
 
-def process_frame(image_data: str):
+def process_frame(image_data: str) -> str:
     """
     Process a Base64-encoded image to detect facial landmarks and determine if the person is focused.
     """
@@ -74,7 +74,7 @@ def process_frame(image_data: str):
         )
         
         if success:
-             # Convert rotation vector to rotation matrix.
+            # Convert rotation vector to rotation matrix.
             rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
             # Decompose the rotation matrix to get Euler angles.
             retval, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rotation_matrix)
@@ -102,7 +102,7 @@ async def websocket_endpoint(websocket: WebSocket):
     
     await websocket.accept()
     try:
-        calibration_frames = 180
+        calibration_frames = 10
         calibration_angles = []
         while True:
             # Receive a Base64-encoded image from the client.
@@ -111,16 +111,19 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if(type(result_base)==type('abc')):
                 status = result_base
+
             else:
                 if calibration_frames != 0:
                     calibration_frames -= 1
                     calibration_angles.append(result_base)
+
                     if calibration_frames == 0:
                         # Compute average baseline angles.
                         baseline_pitch = np.mean([angle[0] for angle in calibration_angles])
                         baseline_yaw = np.mean([angle[1] for angle in calibration_angles])
                         baseline_roll = np.mean([angle[2] for angle in calibration_angles])
                     status = "Calculating Face Angles"
+                    
                 else:
                     pitch, yaw, roll, iris_position = result_base
                     # Now you can compute differences relative to a baseline.
@@ -142,4 +145,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
