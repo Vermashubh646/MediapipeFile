@@ -129,7 +129,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     relative_yaw   = abs(yaw - baseline_yaw)
                     relative_roll  = abs(roll - baseline_roll)
 
-                    if relative_pitch < 20 and relative_yaw < 20 and relative_roll < 20:
+                    if relative_pitch < 60 and relative_yaw < 60 and relative_roll < 60:
                         status = "Focused"
                     else:
                         status = "Not Focused"
