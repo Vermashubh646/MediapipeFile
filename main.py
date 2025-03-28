@@ -5,7 +5,18 @@ import base64
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from fastapi.middleware.cors import CORSMiddleware  # <-- Add this import
+
 app = FastAPI()
+
+# Add CORS middleware here, right after the app is created
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow your frontend origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize Mediapipe Face Mesh solution
 mp_face_mesh = mp.solutions.face_mesh
