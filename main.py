@@ -142,7 +142,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     status = "Calculating Face Angles"
                     
                 else:
-                    pitch, yaw, roll, iris_position = result_base
+                    # pitch, yaw, roll, iris_position = result_base
+                    pitch, yaw, roll = result_base
                     # Now you can compute differences relative to a baseline.
                     relative_pitch = abs(pitch - baseline_pitch)
                     relative_yaw = abs(yaw - baseline_yaw)
