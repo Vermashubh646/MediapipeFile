@@ -100,9 +100,10 @@ def process_frame(image_data: str) -> str:
             right_iris_x = face_landmarks.landmark[473].x * w
             nose_x = face_landmarks.landmark[1].x * w
             
-            iris_position = (left_iris_x + right_iris_x) / 2 - nose_x
+            # iris_position = (left_iris_x + right_iris_x) / 2 - nose_x
             
-            return pitch, yaw, roll, iris_position
+            # return pitch, yaw, roll, iris_position
+            return pitch, yaw, roll
 
 @app.get("/")
 async def read_root():
@@ -148,9 +149,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     relative_roll = abs(roll - baseline_roll)
                     
                     if relative_pitch < 20 and relative_yaw < 20 and relative_roll < 20:
-                        if abs(iris_position) < 2 or abs(iris_position)>10:
-                            status="Not Focused"
-                        else:
+                        # if abs(iris_position) < 2 or abs(iris_position)>10:
+                        #     status="Not Focused"
+                        # else:
                             status = "Focused"
                     else:
                         status = "Not Focused"
