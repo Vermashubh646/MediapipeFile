@@ -104,6 +104,11 @@ def process_frame(image_data: str) -> str:
             
             return pitch, yaw, roll, iris_position
 
+@app.get("/")
+async def read_root():
+    return {"message": "Welcome to the FastAPI WebSocket service!"}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """
